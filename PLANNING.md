@@ -2,9 +2,9 @@
 
 Roadmap and decision log for SyllabAI. `CLAUDE.md`/`AGENTS.md` describe how the current architecture works; this file tracks what's built, what's deferred, and why — update it when scope or a major decision changes, rather than letting that context live only in chat history.
 
-## Status: Core MVP built, not yet run end-to-end
+## Status: Core MVP built and verified end-to-end
 
-Real chunked-embedding RAG on pgvector, plus a structured-extraction pass so deterministic questions (deadlines, grading weights) skip the LLM. Backend and frontend typecheck and build; the chunker has been smoke-tested standalone. Not yet verified: the actual golden path (upload → ingest → ask), which needs Docker running Postgres+pgvector and a real `OPENAI_API_KEY`.
+Real chunked-embedding RAG on pgvector, plus a structured-extraction pass so deterministic questions (deadlines, grading weights) skip the LLM. Verified against a real running stack (Docker Postgres+pgvector, real `OPENAI_API_KEY`): upload → parse → parallel chunk+embed/structured-extraction → `ready` status; a deadline question and a grading-weight question both routed `structured` with correct, instant answers; an open-ended late-policy question routed `rag`, retrieved the correct chunk by section title, and generated a grounded answer; an out-of-scope question (wifi password) was correctly refused rather than hallucinated. Also supports `.docx` uploads (via `mammoth`) alongside PDF, verified through the same pipeline.
 
 ## Why this rebuild happened
 
@@ -29,9 +29,9 @@ These were scoped out so the MVP could ship without design-by-committee, but the
 
 ## Resume framing
 
-Don't upgrade the resume bullet to "RAG system" language until real retrieval infrastructure exists and has been exercised end-to-end (it hasn't yet — see Status above). Once verified, the accurate claims are: chunked-embedding RAG over pgvector with cosine similarity search, a structured-extraction pipeline that routes deterministic queries around the LLM, and (once added) an eval harness tracking hallucination rate — not just "used the OpenAI API in a prompt."
+"RAG system" language is now earned — real retrieval infrastructure exists and has been exercised end-to-end (see Status above). Accurate claims as of this verification: chunked-embedding RAG over pgvector with cosine similarity search, a structured-extraction pipeline that routes deterministic queries around the LLM, and (once added) an eval harness tracking hallucination rate — not just "used the OpenAI API in a prompt." The eval-harness and calendar-export bullets should stay framed as in-progress/planned until those are actually built (see Deferred, above).
 
 ## Next steps
 
-1. Get Docker running locally, fill in `OPENAI_API_KEY`, run the golden path (upload a real syllabus PDF → structured summary populates → deadline question routes `structured` → open-ended question routes `rag` with grounded sources → out-of-syllabus question is refused rather than hallucinated).
-2. Once the MVP is verified, pick the next deferred item (calendar export is the smallest lift) or start the eval harness if reliability is the priority for interview-readiness.
+1. ~~Get Docker running locally, fill in `OPENAI_API_KEY`, run the golden path~~ — done.
+2. Pick the next deferred item: calendar export is the smallest lift, or start the eval harness if reliability is the priority for interview-readiness.
