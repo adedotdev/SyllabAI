@@ -8,7 +8,7 @@ import {
   syllabusGradingWeights,
   syllabusExtracted,
 } from "../db/schema.js";
-import { parsePdf } from "./pdfParser.js";
+import { parseDocument } from "./documentParser.js";
 import { chunkSyllabus } from "./chunker.js";
 import { embedTexts } from "./embeddings.js";
 import { extractStructuredData } from "./extraction.js";
@@ -70,7 +70,7 @@ export async function runIngestionPipeline(syllabusId: string): Promise<void> {
   await db.update(syllabi).set({ status: "processing", updatedAt: new Date() }).where(eq(syllabi.id, syllabusId));
 
   const fileBuffer = await fs.readFile(syllabus.filePath);
-  const rawText = await parsePdf(fileBuffer);
+  const rawText = await parseDocument(syllabus.filePath, fileBuffer);
 
   await db.update(syllabi).set({ rawText, updatedAt: new Date() }).where(eq(syllabi.id, syllabusId));
 
