@@ -26,7 +26,7 @@ export default function UploadForm() {
     <form onSubmit={handleSubmit}>
       <input
         type="file"
-        accept="application/pdf"
+        accept=".pdf,.docx"
         onChange={(e) => setFile(e.target.files?.[0] ?? null)}
       />
       <button type="submit" disabled={!file || submitting}>

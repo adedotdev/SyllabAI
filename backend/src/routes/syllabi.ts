@@ -13,6 +13,7 @@ import {
 } from "../db/schema.js";
 import { env } from "../env.js";
 import { runIngestionPipeline } from "../services/ingestionPipeline.js";
+import { SUPPORTED_EXTENSIONS } from "../services/documentParser.js";
 
 const router = Router();
 
@@ -25,8 +26,12 @@ const upload = multer({
   }),
   limits: { fileSize: env.MAX_UPLOAD_MB * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype !== "application/pdf") {
-      cb(new Error("Only PDF files are supported"));
+    // Validated by extension rather than mimetype: browsers/OSes report
+    // inconsistent mimetypes for .docx (sometimes application/octet-stream),
+    // and extension is also what documentParser.ts dispatches on.
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!SUPPORTED_EXTENSIONS.includes(ext as (typeof SUPPORTED_EXTENSIONS)[number])) {
+      cb(new Error(`Unsupported file type. Supported: ${SUPPORTED_EXTENSIONS.join(", ")}`));
       return;
     }
     cb(null, true);
