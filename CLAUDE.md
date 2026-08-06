@@ -9,7 +9,7 @@ All commands run from the repo root using npm workspaces (`backend`, `frontend`)
 ```bash
 npm install                              # installs both workspaces
 cp .env.example .env                     # then fill in OPENAI_API_KEY
-docker compose up -d                     # starts Postgres (pgvector/pgvector:pg16) on :5432
+docker compose up -d                     # starts Postgres (pgvector/pgvector:pg16) on :5433 (remapped from 5432 -- see docker-compose.yml)
 npm run db:migrate                       # applies migrations in backend/src/db/migrations (incl. CREATE EXTENSION vector)
 npm run dev:backend                      # Express API on :4000 (tsx watch)
 npm run dev:frontend                     # Vite dev server on :5173, proxies /api -> :4000
@@ -30,7 +30,7 @@ This is a from-scratch rebuild of a hackathon syllabus-Q&A tool, redesigned arou
 
 ### Two independent pipelines, one shared input
 
-Both pipelines start from the same parsed PDF text (`syllabi.raw_text`) and run **in parallel** via `Promise.allSettled` in `backend/src/services/ingestionPipeline.ts` — they don't depend on each other's output, so a failure or slowness in one doesn't block the other, and either can be re-run alone later.
+Both pipelines start from the same parsed document text (`syllabi.raw_text`) and run **in parallel** via `Promise.allSettled` in `backend/src/services/ingestionPipeline.ts` — they don't depend on each other's output, so a failure or slowness in one doesn't block the other, and either can be re-run alone later. `documentParser.ts` dispatches to `pdfParser.ts` (`unpdf`) or `docxParser.ts` (`mammoth`) based on the uploaded file's extension — upload validation in `routes/syllabi.ts` checks the same extension list (`SUPPORTED_EXTENSIONS`) rather than trusting the browser-reported mimetype, since `.docx` mimetypes are reported inconsistently.
 
 1. **Chunk + embed pass** (`chunker.ts` → `embeddings.ts` → `syllabus_chunks` table): splits on recognized syllabus headings (Grading, Schedule, Policies, Office Hours, etc.), then recursively token-splits oversized sections (~300 tokens, ~50 overlap) via `gpt-tokenizer`, batch-embeds via `text-embedding-3-small`, stores each chunk with its `embedding vector(1536)` column.
 2. **Structured extraction pass** (`extraction.ts` + `schemas/extraction.schema.ts`): one `gpt-4o-mini` call with `response_format: json_schema` (strict) producing deadlines/gradingWeights/officeHours/policies, fanned out into `syllabus_deadlines`, `syllabus_grading_weights`, and the JSONB catch-all `syllabus_extracted`.

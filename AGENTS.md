@@ -9,7 +9,7 @@ Run from the repo root using npm workspaces (`backend`, `frontend`):
 ```bash
 npm install                              # installs both workspaces
 cp .env.example .env                     # then fill in OPENAI_API_KEY
-docker compose up -d                     # starts Postgres (pgvector/pgvector:pg16) on :5432
+docker compose up -d                     # starts Postgres (pgvector/pgvector:pg16) on :5433 (remapped from 5432 -- see docker-compose.yml)
 npm run db:migrate                       # applies migrations in backend/src/db/migrations (incl. CREATE EXTENSION vector)
 npm run dev:backend                      # Express API on :4000 (tsx watch)
 npm run dev:frontend                     # Vite dev server on :5173, proxies /api -> :4000
@@ -31,7 +31,7 @@ Calendar export, multi-syllabus workspaces, and an eval harness are intentionall
 
 ### Ingestion: two independent passes over one parsed text
 
-`backend/src/services/ingestionPipeline.ts` parses the uploaded PDF once (`raw_text`), then runs two passes **in parallel** via `Promise.allSettled` — they don't depend on each other, so either can fail or be re-run without touching the other:
+`backend/src/services/ingestionPipeline.ts` parses the uploaded document once (`raw_text`) via `documentParser.ts`, which dispatches to `pdfParser.ts` (`unpdf`) or `docxParser.ts` (`mammoth`) based on file extension, then runs two passes **in parallel** via `Promise.allSettled` — they don't depend on each other, so either can fail or be re-run without touching the other:
 
 1. **Chunk + embed** (`chunker.ts` → `embeddings.ts` → `syllabus_chunks`): splits on recognized syllabus headings (Grading, Schedule, Policies, Office Hours, ...), recursively token-splits oversized sections (~300 tokens, ~50 overlap), embeds via `text-embedding-3-small`, stores each chunk with its `vector(1536)` embedding.
 2. **Structured extraction** (`extraction.ts` + `schemas/extraction.schema.ts`): one `gpt-4o-mini` call with a strict `json_schema` response format, fanned out into `syllabus_deadlines`, `syllabus_grading_weights`, and the JSONB catch-all `syllabus_extracted`.
